@@ -514,7 +514,7 @@ async def cmd_start(message: Message):
     registered = await db.user_exists(user_id)
     try:
         # ИСПРАВЛЕНО: обратный слеш заменён на прямой
-        photo = FSInputFile("assets/welcome.jpg")
+        photo = FSInputFile("welcome.jpg")
         await message.answer_photo(
             photo=photo,
             caption=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
@@ -1641,4 +1641,5 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
+
     asyncio.run(main())
