@@ -605,6 +605,17 @@ async def delete_profile_confirm(message: Message, state: FSMContext):
         await state.clear()
         # Возвращаем пользователя в меню настроек
         await settings_menu(message)
+
+
+@dp.message()
+async def fallback_handler(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    logging.warning(f"Необработанное сообщение от {message.from_user.id}: {message.text}, состояние: {current_state}")
+    registered = await db.user_exists(message.from_user.id)
+    await message.answer(
+        "Я не понимаю эту команду. Пожалуйста, воспользуйтесь кнопками.",
+        reply_markup=main_keyboard(registered)
+    )
 # ---------- Регистрация ----------
 @dp.message(F.text == "📝 Регистрация")
 async def registration_start(message: Message, state: FSMContext):
@@ -1694,3 +1705,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
