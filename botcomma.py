@@ -16,21 +16,21 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
 from typing import Union
 import asyncpg
+import os
 
 
 API_TOKEN = '8394242496:AAGuBC6Lz5YkHfyRHvIlHGiLhxecjMTYlrQ'         
-ADMIN_CHAT_ID = 5211249049          
+ADMIN_CHAT_ID = 5211249049 
+SUPPORT_LINK = 'https://t.me/heart2heartopiachannel/11'  # замените на реальную ссылку на пост         
 CHANNEL_LINK = 'https://t.me/heart2heartopiachannel'
 DB_CONFIG = {
-    'user': 'heart2heatopia_bot',
-    'password': 'admin',
-    'database': 'heartopia',
-    'host': 'localhost',
-    'port': '5432',
+    'user': os.getenv('DB_USER', 'bothost_db_e613db7d7af0'),
+    'password': os.getenv('DB_PASSWORD', 'ewVm6ihLRyY--KD1TUJj-SQfsdjhQj0JyyEmbT3-OIY'),
+    'database': os.getenv('DB_NAME', 'bothost_db_e613db7d7af0'),
+    'host': os.getenv('DB_HOST', 'node1.pghost.ru'),
+    'port': os.getenv('DB_PORT', '32788'),
     'server_settings': {'client_encoding': 'UTF8'}
 }
-
-
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
@@ -456,6 +456,34 @@ def get_cancel_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True
     )
 
+async def show_main_menu(chat_id: int, user_id: int):
+    registered = await db.user_exists(user_id)
+    support_button = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="❤️ Поддержать автора", url=SUPPORT_LINK)]
+        ]
+    )
+    try:
+        photo = FSInputFile("welcome.jpg")
+        await bot.send_photo(
+            chat_id=chat_id,
+            photo=photo,
+            caption=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
+                    f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
+                    f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
+            reply_markup=support_button
+        )
+    except Exception as e:
+        logging.error(f"Ошибка отправки фото: {e}")
+        await bot.send_message(
+            chat_id=chat_id,
+            text=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
+                 f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
+                 f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
+            reply_markup=support_button
+        )
+    await bot.send_message(chat_id, "Выберите действие:", reply_markup=main_keyboard(registered))
+
 async def perform_search(user_id: int, chat_id: int, state: FSMContext):
     data = await state.get_data()
     viewed = data.get('viewed_user_ids', [])
@@ -483,7 +511,7 @@ async def perform_search(user_id: int, chat_id: int, state: FSMContext):
     caption = (
         f"👤 {profile['username']}\n"
         f"🔔 {profile['telegram_username'] or 'Не указан'}\n"
-        f"🆔 UID: ``{profile['uid']}``\n"
+        f"🆔 UID: `{profile['uid']}`\n"
         f"🌍 Сервер: {profile['server']}\n"
         f"📝 Заметка: {profile.get('notes', '—')}\n\n"
         f"Есть для обмена:\n{dup_text}\n\n"
@@ -512,33 +540,31 @@ async def perform_search(user_id: int, chat_id: int, state: FSMContext):
 async def cmd_start(message: Message):
     user_id = message.from_user.id
     registered = await db.user_exists(user_id)
+    support_button = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="❤️ Поддержать автора", url=SUPPORT_LINK)]
+        ]
+    )
+
     try:
-        # ИСПРАВЛЕНО: обратный слеш заменён на прямой
         photo = FSInputFile("welcome.jpg")
         await message.answer_photo(
             photo=photo,
             caption=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
                     f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
                     f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
-            reply_markup=main_keyboard(registered)
+            reply_markup=support_button
         )
-    except:
+    except Exception as e:
+        logging.error(f"Ошибка отправки фото: {e}")
         await message.answer(
             f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
             f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
             f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
-            reply_markup=main_keyboard(registered)
+            reply_markup=support_button
         )
 
-@dp.callback_query(F.data == "delete_profile")
-async def delete_profile_start(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
-        "⚠️ Вы уверены, что хотите удалить свой профиль?\n"
-        "Все ваши данные (инвентарь, вишлист, история обменов) будут безвозвратно удалены.\n\n"
-        "Для подтверждения отправьте слово `ДА` (без кавычек) или нажмите /cancel для отмены.",
-        parse_mode="Markdown"
-    )
-    await state.set_state(ConfirmDelete.waiting_for_confirmation)
+    await message.answer("Выберите действие:", reply_markup=main_keyboard(registered))
 
 @dp.message(Command("cancel"), StateFilter(ConfirmDelete.waiting_for_confirmation))
 async def cancel_delete(message: Message, state: FSMContext):
@@ -608,21 +634,40 @@ async def process_uid(message: Message, state: FSMContext):
 
 @dp.message(Register.waiting_for_notes, F.text)
 async def process_notes(message: Message, state: FSMContext):
+    if message.text == "❌ Отмена":
+        await state.clear()
+        await message.answer("Регистрация отменена.", reply_markup=main_keyboard(False))
+        return
     notes = message.text.strip() if message.text != '-' else ''
     data = await state.get_data()
-    await db.register_user(
-        user_id=message.from_user.id,
-        telegram_username=message.from_user.username or '',
-        username=data['username'],
-        uid=data['uid'],
-        server=data['server'],
-        chat_id=message.chat.id,
-        notes=notes
-    )
-    
+    try:
+        await db.register_user(
+            user_id=message.from_user.id,
+            telegram_username=message.from_user.username or '',
+            username=data['username'],
+            uid=data['uid'],
+            server=data['server'],
+            chat_id=message.chat.id,
+            notes=notes
+        )
+    except Exception as e:
+        logging.error(f"Ошибка при регистрации: {e}")
+        await message.answer("Произошла ошибка при регистрации. Попробуйте позже или обратитесь к администратору.")
+        await state.clear()
+        return
     await state.clear()
     await message.answer("Регистрация завершена! Теперь добавим ваши значки.")
     await start_add_inventory(message.from_user.id, state)
+
+@dp.message(Command("cancel"))
+async def cmd_cancel(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer("Нет активного действия для отмены.")
+        return
+    await state.clear()
+    registered = await db.user_exists(message.from_user.id)
+    await message.answer("Действие отменено.", reply_markup=main_keyboard(registered))
 
 async def start_add_inventory(user_id: int, state: FSMContext):
     await bot.send_message(user_id, "Выберите коллекцию, из которой у вас есть значки:", reply_markup=get_collections_keyboard())
@@ -1393,7 +1438,7 @@ async def settings_profile(callback: CallbackQuery):
     text = (
         f"🔔 {user['telegram_username'] or 'Не указан'}\n"
         f"👤 {user['username']}\n"
-        f"🆔 UID: {user['uid']}\n"
+        f"🆔 UID: `{user['uid']}`\n"
         f"🌍 Сервер: {user['server']}\n"
         f"📝 Заметка: {user.get('notes', '—')}\n"
     )
@@ -1589,9 +1634,9 @@ async def edit_notes(message: Message, state: FSMContext):
 
 @dp.callback_query(F.data == "back_to_settings")
 async def back_to_settings(callback: CallbackQuery):
-    await callback.answer()  # добавить эту строку
+    await callback.answer()
     await callback.message.delete()
-    await settings_menu(callback.message)
+    await show_main_menu(callback.message.chat.id, callback.from_user.id)
 # ---------- Обратная связь ----------
 @dp.message(F.text == "📞 Обратная связь")
 async def feedback_start(message: Message, state: FSMContext):
@@ -1608,7 +1653,7 @@ async def feedback_start(message: Message, state: FSMContext):
 async def settings_back(callback: CallbackQuery):
     await callback.answer()
     await callback.message.delete()
-    await callback.message.answer("Главное меню:", reply_markup=main_keyboard(True))
+    await show_main_menu(callback.message.chat.id, callback.from_user.id)
 
 
 @dp.callback_query(F.data.startswith("feedback_"))
@@ -1641,5 +1686,4 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
-
     asyncio.run(main())
