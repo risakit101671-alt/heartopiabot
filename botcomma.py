@@ -1317,20 +1317,21 @@ async def cancel_trade(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await callback.message.answer("Действие отменено.", reply_markup=main_keyboard(True))
 
-@dp.message(F.text == "⚙️ Настройки")
+@dp.message(F.text.in_({"⚙️ Настройки", "Настройки"}))
 async def settings_menu(message: Message):
+    logging.info("settings_menu called")
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📦 Инвентарь", callback_data="settings_inventory")],
             [InlineKeyboardButton(text="⭐ Вишлист", callback_data="settings_wishlist")],
             [InlineKeyboardButton(text="🖼 Фото профиля", callback_data="settings_photo")],
             [InlineKeyboardButton(text="👤 Профиль", callback_data="settings_profile")],
-            [InlineKeyboardButton(text="❌ Удалить профиль", callback_data="delete_profile")],  # новая кнопка
+            [InlineKeyboardButton(text="❌ Удалить профиль", callback_data="delete_profile")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="settings_back")]
         ]
     )
     await message.answer("Настройки:", reply_markup=keyboard)
-
+    
 @dp.callback_query(F.data == "settings_inventory")
 async def settings_inventory(callback: CallbackQuery):
     badges = await db.get_user_badges(callback.from_user.id)
@@ -1705,4 +1706,5 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
 
