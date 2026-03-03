@@ -456,6 +456,18 @@ def get_cancel_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True
     )
 
+def get_edit_profile_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📝 Никнейм", callback_data="edit_username")],
+            [InlineKeyboardButton(text="🌍 Сервер", callback_data="edit_server")],
+            [InlineKeyboardButton(text="🆔 UID", callback_data="edit_uid")],
+            [InlineKeyboardButton(text="📌 Заметка", callback_data="edit_notes")],
+            [InlineKeyboardButton(text="📞 Юзернейм", callback_data="edit_contact")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="settings_profile")]
+        ]
+    )
+
 async def show_main_menu(chat_id: int, user_id: int):
     registered = await db.user_exists(user_id)
     support_button = InlineKeyboardMarkup(
@@ -1468,44 +1480,32 @@ async def edit_profile_start(callback: CallbackQuery, state: FSMContext):
     try:
         await callback.message.delete()
     except TelegramBadRequest:
-        pass  # сообщение уже удалено
+        pass
     await show_edit_profile_menu(callback.from_user.id, state)
-    await state.set_state(EditProfile.choosing_field)
 
 async def show_edit_profile_menu(user_id: int, state: FSMContext):
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📝 Никнейм", callback_data="edit_username")],
-            [InlineKeyboardButton(text="🌍 Сервер", callback_data="edit_server")],
-            [InlineKeyboardButton(text="🆔 UID", callback_data="edit_uid")],
-            [InlineKeyboardButton(text="📌 Заметка", callback_data="edit_notes")],
-            [InlineKeyboardButton(text="📞 Юзернейм", callback_data="edit_contact")],  # новая кнопка
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="settings_profile")]
-        ]
-    )
-    await bot.send_message(user_id, "Что вы хотите изменить?", reply_markup=keyboard)
+    await bot.send_message(user_id, "Что вы хотите изменить?", reply_markup=get_edit_profile_keyboard())
     await state.set_state(EditProfile.choosing_field)
 
 @dp.callback_query(EditProfile.choosing_field, F.data.startswith("edit_"))
 async def edit_profile_field(callback: CallbackQuery, state: FSMContext):
-    field = callback.data.split('_')[1]  # username, server, uid, notes
+    field = callback.data.split('_')[1]  # username, server, uid, notes, contact
     await state.update_data(edit_field=field)
     prompts = {
-    "username": "Введите новый никнейм:",
-    "server": "Выберите новый сервер:",
-    "uid": "Введите новый UID:",
-    "notes": "Введите новую заметку о себе:",
-    "contact": "Введите новый контактный юзернейм (можно @ или любой текст):"
-}
+        "username": "Введите новый никнейм:",
+        "server": "Выберите новый сервер:",
+        "uid": "Введите новый UID:",
+        "notes": "Введите новую заметку о себе:",
+        "contact": "Введите новый контактный юзернейм (можно @ или любой текст):"
+    }
     if field == "server":
         await callback.message.answer(prompts[field], reply_markup=get_servers_keyboard())
         await callback.message.delete()
         await state.set_state(EditProfile.waiting_for_new_server)
     elif field == "contact":
-        await callback.message.answer("Введите новый контактный юзернейм (можно @ или любой текст):", reply_markup=get_cancel_keyboard())
+        await callback.message.answer(prompts[field], reply_markup=get_cancel_keyboard())
         await callback.message.delete()
         await state.set_state(EditProfile.waiting_for_new_contact)
-
     else:
         await callback.message.answer(prompts[field], reply_markup=get_cancel_keyboard())
         await callback.message.delete()
@@ -1516,11 +1516,13 @@ async def edit_profile_field(callback: CallbackQuery, state: FSMContext):
         elif field == "notes":
             await state.set_state(EditProfile.waiting_for_new_notes)
 
+
+            
 @dp.message(EditProfile.waiting_for_new_username, F.text)
 async def edit_username(message: Message, state: FSMContext):
     if message.text == "❌ Отмена":
         await state.clear()
-        await message.answer("Изменение отменено.")
+        await show_edit_profile_menu(message.from_user.id, state)
         return
     new_username = message.text.strip()
     user = await db.get_user(message.from_user.id)
@@ -1538,7 +1540,8 @@ async def edit_username(message: Message, state: FSMContext):
         notes=user.get('notes', '')
     )
     await state.clear()
-    await message.answer("✅ Никнейм обновлён!")
+    await message.answer("✅ Никнейм обновлён!\n\nЧто вы хотите изменить?", reply_markup=get_edit_profile_keyboard())
+    await state.set_state(EditProfile.choosing_field)
 
 @dp.callback_query(EditProfile.choosing_field, F.data == "edit_contact")
 async def edit_contact_start(callback: CallbackQuery, state: FSMContext):
@@ -1555,8 +1558,9 @@ async def edit_contact_process(message: Message, state: FSMContext):
     new_contact = message.text.strip()
     await db.update_telegram_username(message.from_user.id, new_contact)
     await state.clear()
-    await message.answer("✅ Контактный юзернейм обновлён!")  # <-- добавить эту строку
-    await show_edit_profile_menu(message.from_user.id, state)
+    await message.answer("✅ Контактный юзернейм обновлён!\n\nЧто вы хотите изменить?", reply_markup=get_edit_profile_keyboard())
+    await state.set_state(EditProfile.choosing_field)
+
 
 @dp.message(EditProfile.waiting_for_new_server, F.text)
 async def edit_server(message: Message, state: FSMContext):
@@ -1579,14 +1583,15 @@ async def edit_server(message: Message, state: FSMContext):
         notes=user.get('notes', '')
     )
     await state.clear()
-    await message.answer("✅ Сервер обновлён!")
+    await message.answer("✅ Сервер обновлён!\n\nЧто вы хотите изменить?", reply_markup=get_edit_profile_keyboard())
+    await state.set_state(EditProfile.choosing_field)
 
 
 @dp.message(EditProfile.waiting_for_new_uid, F.text)
 async def edit_uid(message: Message, state: FSMContext):
     if message.text == "❌ Отмена":
         await state.clear()
-        await message.answer("Изменение отменено.")
+        await show_edit_profile_menu(message.from_user.id, state)
         return
     new_uid = message.text.strip()
     user = await db.get_user(message.from_user.id)
@@ -1604,7 +1609,8 @@ async def edit_uid(message: Message, state: FSMContext):
         notes=user.get('notes', '')
     )
     await state.clear()
-    await message.answer("✅ UID обновлён!")
+    await message.answer("✅ UID обновлён!\n\nЧто вы хотите изменить?", reply_markup=get_edit_profile_keyboard())
+    await state.set_state(EditProfile.choosing_field)
 
 
 
@@ -1612,7 +1618,7 @@ async def edit_uid(message: Message, state: FSMContext):
 async def edit_notes(message: Message, state: FSMContext):
     if message.text == "❌ Отмена":
         await state.clear()
-        await message.answer("Изменение отменено.")
+        await show_edit_profile_menu(message.from_user.id, state)
         return
     new_notes = message.text.strip() if message.text != '-' else ''
     user = await db.get_user(message.from_user.id)
@@ -1630,7 +1636,8 @@ async def edit_notes(message: Message, state: FSMContext):
         notes=new_notes
     )
     await state.clear()
-    await message.answer("✅ Заметка обновлена!")
+    await message.answer("✅ Заметка обновлена!\n\nЧто вы хотите изменить?", reply_markup=get_edit_profile_keyboard())
+    await state.set_state(EditProfile.choosing_field)
 
 @dp.callback_query(F.data == "back_to_settings")
 async def back_to_settings(callback: CallbackQuery):
@@ -1687,8 +1694,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
-
-
-
-
