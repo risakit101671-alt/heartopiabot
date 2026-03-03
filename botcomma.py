@@ -540,15 +540,14 @@ async def perform_search(user_id: int, chat_id: int, state: FSMContext):
     progress = await db.get_wishlist_progress(user_id)
 
     caption = (
-        f"👤 {profile['username']}\n"
-        f"🔔 {profile['telegram_username'] or 'Не указан'}\n"
-        f"🆔 UID: `{profile['uid']}`\n"
-        f"🌍 Сервер: {profile['server']}\n"
-        f"📝 Заметка: {profile.get('notes', '—')}\n\n"
-        f"Есть для обмена:\n{dup_text}\n\n"
-        f"📋 Ваш вишлист: {progress['filled']}/21"
+    f"👤 {profile['username']}\n"
+    f"🔔 {profile['telegram_username'] or 'Не указан'}\n"
+    f"🆔 UID: <code>{profile['uid']}</code>\n"
+    f"🌍 Сервер: {profile['server']}\n"
+    f"📝 Заметка: {profile.get('notes', '—')}\n\n"
+    f"Есть для обмена:\n{dup_text}\n\n"
+    f"📋 Ваш вишлист: {progress['filled']}/21"
     )
-
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -562,9 +561,9 @@ async def perform_search(user_id: int, chat_id: int, state: FSMContext):
     await state.update_data(viewed_user_ids=viewed)
 
     if profile.get('profile_photo'):
-        await bot.send_photo(chat_id, photo=profile['profile_photo'], caption=caption, reply_markup=keyboard)
+        await bot.send_photo(chat_id, photo=profile['profile_photo'], caption=caption, parse_mode="HTML", reply_markup=keyboard)
     else:
-        await bot.send_message(chat_id, caption, reply_markup=keyboard)
+        await bot.send_message(chat_id, caption, parse_mode="HTML", reply_markup=keyboard)
 # ================== ХЕНДЛЕРЫ ==================
 
 @dp.message(Command("start"))
@@ -1026,15 +1025,15 @@ async def trade_offer_start(callback: CallbackQuery, state: FSMContext):
         for dup in my_duplicates:
             btn_text = f"{dup['collection']} - {dup['character_name']} (x{dup['quantity']-1})"
             builder.button(text=btn_text, callback_data=f"own_badge:{dup['badge_id']}")
-    else:
-        # Если дубликатов нет, всё равно покажем кнопку "Ничего"
-        pass
 
     builder.button(text="🎁 Ничего (подарок)", callback_data="own_nothing")
     builder.button(text="❌ Отмена", callback_data="cancel_trade")
     builder.adjust(1)
 
-    await callback.message.edit_text(
+    # Удаляем старое сообщение (анкету с фото)
+    await callback.message.delete()
+    # Отправляем новое текстовое сообщение
+    await callback.message.answer(
         "Выберите значок, который вы готовы отдать:",
         reply_markup=builder.as_markup()
     )
