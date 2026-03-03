@@ -607,15 +607,7 @@ async def delete_profile_confirm(message: Message, state: FSMContext):
         await settings_menu(message)
 
 
-@dp.message()
-async def fallback_handler(message: Message, state: FSMContext):
-    current_state = await state.get_state()
-    logging.warning(f"Необработанное сообщение от {message.from_user.id}: {message.text}, состояние: {current_state}")
-    registered = await db.user_exists(message.from_user.id)
-    await message.answer(
-        "Я не понимаю эту команду. Пожалуйста, воспользуйтесь кнопками.",
-        reply_markup=main_keyboard(registered)
-    )
+
 # ---------- Регистрация ----------
 @dp.message(F.text == "📝 Регистрация")
 async def registration_start(message: Message, state: FSMContext):
@@ -938,7 +930,7 @@ async def back_to_wishlist_collections(callback: CallbackQuery, state: FSMContex
 
 # ---------- Поиск анкет ----------
 
-@dp.message(F.text == "🔍 Искать значки")
+@dp.message(lambda msg: "Искать значки" in msg.text)
 async def search_profile(message: Message, state: FSMContext):
     logging.info(f"search_profile called by user {message.from_user.id}")
     # Сбрасываем список просмотренных при новом поиске
@@ -1317,21 +1309,20 @@ async def cancel_trade(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await callback.message.answer("Действие отменено.", reply_markup=main_keyboard(True))
 
-@dp.message(F.text.in_({"⚙️ Настройки", "Настройки"}))
+@dp.message(F.text == "⚙️ Настройки")
 async def settings_menu(message: Message):
-    logging.info("settings_menu called")
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📦 Инвентарь", callback_data="settings_inventory")],
             [InlineKeyboardButton(text="⭐ Вишлист", callback_data="settings_wishlist")],
             [InlineKeyboardButton(text="🖼 Фото профиля", callback_data="settings_photo")],
             [InlineKeyboardButton(text="👤 Профиль", callback_data="settings_profile")],
-            [InlineKeyboardButton(text="❌ Удалить профиль", callback_data="delete_profile")],
+            [InlineKeyboardButton(text="❌ Удалить профиль", callback_data="delete_profile")],  # новая кнопка
             [InlineKeyboardButton(text="🔙 Назад", callback_data="settings_back")]
         ]
     )
     await message.answer("Настройки:", reply_markup=keyboard)
-    
+
 @dp.callback_query(F.data == "settings_inventory")
 async def settings_inventory(callback: CallbackQuery):
     badges = await db.get_user_badges(callback.from_user.id)
@@ -1529,7 +1520,7 @@ async def edit_profile_field(callback: CallbackQuery, state: FSMContext):
             await state.set_state(EditProfile.waiting_for_new_notes)
 
 
-            
+
 @dp.message(EditProfile.waiting_for_new_username, F.text)
 async def edit_username(message: Message, state: FSMContext):
     if message.text == "❌ Отмена":
@@ -1657,8 +1648,8 @@ async def back_to_settings(callback: CallbackQuery):
     await callback.message.delete()
     await show_main_menu(callback.message.chat.id, callback.from_user.id)
 # ---------- Обратная связь ----------
-@dp.message(F.text == "📞 Обратная связь")
-async def feedback_start(message: Message, state: FSMContext):
+@dp.message(lambda msg: "Обратная связь" in msg.text)
+async def feedback_start(message: Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="⚠️ Пожаловаться", callback_data="feedback_complain")],
@@ -1706,7 +1697,7 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-    
+
 @dp.message()
 async def fallback_handler(message: Message, state: FSMContext):
     current_state = await state.get_state()
@@ -1716,5 +1707,3 @@ async def fallback_handler(message: Message, state: FSMContext):
         "Я не понимаю эту команду. Пожалуйста, воспользуйтесь кнопками.",
         reply_markup=main_keyboard(registered)
     )
-
-
