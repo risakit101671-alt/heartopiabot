@@ -30,7 +30,6 @@ DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'node1.pghost.ru'),
     'port': os.getenv('DB_PORT', '32788'),
     'server_settings': {'client_encoding': 'UTF8'},
-    'ssl': 'disable'      
 }
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
@@ -1688,6 +1687,7 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
 
 
 
