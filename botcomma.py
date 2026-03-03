@@ -23,6 +23,7 @@ API_TOKEN = '8394242496:AAGuBC6Lz5YkHfyRHvIlHGiLhxecjMTYlrQ'
 ADMIN_CHAT_ID = 5211249049 
 SUPPORT_LINK = 'https://t.me/heart2heartopiachannel/11'  # замените на реальную ссылку на пост         
 CHANNEL_LINK = 'https://t.me/heart2heartopiachannel'
+CHAT_LINK = 'https://t.me/heartopia_girls'  # замените на реальную ссылку на ваш чат
 DB_CONFIG = {
     'user': os.getenv('DB_USER', 'bothost_db_e613db7d7af0'),
     'password': os.getenv('DB_PASSWORD', 'ewVm6ihLRyY--KD1TUJj-SQfsdjhQj0JyyEmbT3-OIY'),
@@ -483,7 +484,11 @@ async def show_main_menu(chat_id: int, user_id: int):
     registered = await db.user_exists(user_id)
     support_button = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="❤️ Поддержать автора", url=SUPPORT_LINK)]
+                        [
+                InlineKeyboardButton(text="❤️ Поддержать автора", url=SUPPORT_LINK),
+                InlineKeyboardButton(text="💬 Чат", url=CHAT_LINK)
+            ]
+
         ]
     )
     try:
@@ -491,9 +496,11 @@ async def show_main_menu(chat_id: int, user_id: int):
         await bot.send_photo(
             chat_id=chat_id,
             photo=photo,
-            caption=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
+            caption=f" пожаловать в бота для обмена значками Heartopia!\n\n"
                     f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
-                    f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
+                    f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.\n\n"
+                    f"Так же добавляйся в чат для поиска друзей, туториалов и новостей💕💕",
+                    
             reply_markup=support_button
         )
     except Exception as e:
@@ -502,7 +509,8 @@ async def show_main_menu(chat_id: int, user_id: int):
             chat_id=chat_id,
             text=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
                  f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
-                 f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
+                 f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.\n\n"
+                f"Так же добавляйся в чат для поиска друзей, туториалов и новостей💕💕",
             reply_markup=support_button
         )
     await bot.send_message(chat_id, "Выберите действие:", reply_markup=main_keyboard(registered))
@@ -565,7 +573,11 @@ async def cmd_start(message: Message):
     registered = await db.user_exists(user_id)
     support_button = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="❤️ Поддержать автора", url=SUPPORT_LINK)]
+                        [
+                InlineKeyboardButton(text="❤️ Поддержать автора", url=SUPPORT_LINK),
+                InlineKeyboardButton(text="💬 Чат", url=CHAT_LINK)
+            ]
+
         ]
     )
 
@@ -575,7 +587,8 @@ async def cmd_start(message: Message):
             photo=photo,
             caption=f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
                     f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
-                    f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
+                    f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.\n\n"
+                    f"Так же добавляйся в чат для поиска друзей, туториалов и новостей💕💕",
             reply_markup=support_button
         )
     except Exception as e:
@@ -583,8 +596,8 @@ async def cmd_start(message: Message):
         await message.answer(
             f"Добро пожаловать в бота для обмена значками Heartopia!\n\n"
             f"📢 Присоединяйся в канал и следи за обновами: {CHANNEL_LINK}\n\n"
-            f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.",
-            reply_markup=support_button
+            f"Здесь вы можете находить людей для обмена дубликатами и договариваться о бартере.\n\n"
+            f"Так же добавляйся в чат для поиска друзей, туториалов и новостей💕💕",
         )
 
     await message.answer("Выберите действие:", reply_markup=main_keyboard(registered))
