@@ -468,6 +468,17 @@ def get_edit_profile_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
+
+@dp.callback_query(F.data == "delete_profile")
+async def delete_profile_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "⚠️ Вы уверены, что хотите удалить свой профиль?\n"
+        "Все ваши данные (инвентарь, вишлист, история обменов) будут безвозвратно удалены.\n\n"
+        "Для подтверждения отправьте слово `ДА` (без кавычек) или нажмите /cancel для отмены.",
+        parse_mode="Markdown"
+    )
+    await state.set_state(ConfirmDelete.waiting_for_confirmation)
+
 async def show_main_menu(chat_id: int, user_id: int):
     registered = await db.user_exists(user_id)
     support_button = InlineKeyboardMarkup(
@@ -929,8 +940,7 @@ async def back_to_wishlist_collections(callback: CallbackQuery, state: FSMContex
     await state.set_state(AddWishlist.choosing_collection)
 
 # ---------- Поиск анкет ----------
-
-@dp.message(lambda msg: "Искать значки" in msg.text)
+@dp.message(lambda msg: msg.text and "Искать значки" in msg.text)
 async def search_profile(message: Message, state: FSMContext):
     logging.info(f"search_profile called by user {message.from_user.id}")
     # Сбрасываем список просмотренных при новом поиске
@@ -1017,13 +1027,11 @@ async def trade_offer_start(callback: CallbackQuery, state: FSMContext):
     )
     await state.set_state(TradeOffer.choosing_own_badge)
 
-
 @dp.callback_query(TradeOffer.choosing_own_badge, (F.data.startswith("own_badge:")) | (F.data == "own_nothing"))
 async def trade_choose_own(callback: CallbackQuery, state: FSMContext):
     if callback.data == "own_nothing":
         # Если подарок, сразу переходим к выбору целевого значка (количество = 0)
         await state.update_data(own_collection=None, own_character=None, own_quantity=0)
-        # Переходим к показу целевых значков
         data = await state.get_data()
         target_duplicates = await db.get_user_duplicates_list(data['target_user_id'])
         if not target_duplicates:
@@ -1044,7 +1052,6 @@ async def trade_choose_own(callback: CallbackQuery, state: FSMContext):
         await state.set_state(TradeOffer.choosing_target_badge)
     else:
         own_badge_id = int(callback.data.split(':')[1])
-    # Получаем свои дубликаты, чтобы узнать количество
         my_duplicates = await db.get_user_duplicates_list(callback.from_user.id)
         my_dup = next((dup for dup in my_duplicates if dup['badge_id'] == own_badge_id), None)
         if not my_dup:
@@ -1055,13 +1062,13 @@ async def trade_choose_own(callback: CallbackQuery, state: FSMContext):
             own_collection=my_dup['collection'],
             own_character=my_dup['character_name'],
             own_max_quantity=my_dup['quantity'] - 1
-    )
-    await callback.message.edit_text(
-        f"Вы выбрали: {my_dup['collection']} - {my_dup['character_name']}\n"
-        f"У вас доступно для обмена: {my_dup['quantity']-1} шт.\n"
-        f"Введите количество, которое хотите отдать (0 — отмена):"
-    )
-    await state.set_state(TradeOffer.entering_own_quantity)
+        )
+        await callback.message.edit_text(
+            f"Вы выбрали: {my_dup['collection']} - {my_dup['character_name']}\n"
+            f"У вас доступно для обмена: {my_dup['quantity']-1} шт.\n"
+            f"Введите количество, которое хотите отдать (0 — отмена):"
+        )
+        await state.set_state(TradeOffer.entering_own_quantity)
 
 @dp.message(TradeOffer.entering_own_quantity, F.text)
 async def trade_enter_own_quantity(message: Message, state: FSMContext):
@@ -1103,13 +1110,10 @@ async def trade_enter_own_quantity(message: Message, state: FSMContext):
 async def trade_choose_target(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     if callback.data == "target_nothing":
-        # Если подарок, количество = 0
         await state.update_data(target_collection=None, target_character=None, target_quantity=0)
-        # Переходим к финальному созданию сделки
         await finalize_trade(callback, state)
     else:
         target_badge_id = int(callback.data.split(':')[1])
-    # Получаем дубликаты целевого пользователя
         target_duplicates = await db.get_user_duplicates_list(data['target_user_id'])
         target_dup = next((dup for dup in target_duplicates if dup['badge_id'] == target_badge_id), None)
         if not target_dup:
@@ -1120,13 +1124,13 @@ async def trade_choose_target(callback: CallbackQuery, state: FSMContext):
             target_collection=target_dup['collection'],
             target_character=target_dup['character_name'],
             target_max_quantity=target_dup['quantity'] - 1
-    )
-    await callback.message.edit_text(
-        f"Вы выбрали: {target_dup['collection']} - {target_dup['character_name']}\n"
-        f"У пользователя доступно для обмена: {target_dup['quantity']-1} шт.\n"
-        f"Введите количество, которое хотите получить (0 — отмена):"
-    )
-    await state.set_state(TradeOffer.entering_target_quantity)
+        )
+        await callback.message.edit_text(
+            f"Вы выбрали: {target_dup['collection']} - {target_dup['character_name']}\n"
+            f"У пользователя доступно для обмена: {target_dup['quantity']-1} шт.\n"
+            f"Введите количество, которое хотите получить (0 — отмена):"
+        )
+        await state.set_state(TradeOffer.entering_target_quantity)
 
 @dp.message(TradeOffer.entering_target_quantity, F.text)
 async def trade_enter_target_quantity(message: Message, state: FSMContext):
@@ -1648,7 +1652,8 @@ async def back_to_settings(callback: CallbackQuery):
     await callback.message.delete()
     await show_main_menu(callback.message.chat.id, callback.from_user.id)
 # ---------- Обратная связь ----------
-@dp.message(lambda msg: "Обратная связь" in msg.text)
+
+@dp.message(lambda msg: msg.text and "Обратная связь" in msg.text)
 async def feedback_start(message: Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
