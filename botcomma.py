@@ -24,14 +24,13 @@ ADMIN_CHAT_ID = 5211249049
 SUPPORT_LINK = 'https://t.me/heart2heartopiachannel/11'  # замените на реальную ссылку на пост         
 CHANNEL_LINK = 'https://t.me/heart2heartopiachannel'
 DB_CONFIG = {
-    'ssl': 'require',
     'user': os.getenv('DB_USER', 'bothost_db_e613db7d7af0'),
-    'password': os.getenv('DB_PASSWORD', 'ewVm6ihLRyY--KD1TUJj-SQfsdjhQj0JyyEmbT3-OIY'),
+    'password': os.getenv('DB_PASSWORD', 'ewm6ihLRyY--KD1TUJj-SQfsdjhQj0JyefmbT3-OIY'),
     'database': os.getenv('DB_NAME', 'bothost_db_e613db7d7af0'),
     'host': os.getenv('DB_HOST', 'node1.pghost.ru'),
     'port': os.getenv('DB_PORT', '32788'),
-    'server_settings': {'client_encoding': 'UTF8'}
-}
+    'server_settings': {'client_encoding': 'UTF8'},
+    'ssl': 'disable'         
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
@@ -1688,4 +1687,5 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
 
