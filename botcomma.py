@@ -24,6 +24,7 @@ ADMIN_CHAT_ID = 5211249049
 SUPPORT_LINK = 'https://t.me/heart2heartopiachannel/11'  # замените на реальную ссылку на пост         
 CHANNEL_LINK = 'https://t.me/heart2heartopiachannel'
 DB_CONFIG = {
+    'ssl': 'require',
     'user': os.getenv('DB_USER', 'bothost_db_e613db7d7af0'),
     'password': os.getenv('DB_PASSWORD', 'ewVm6ihLRyY--KD1TUJj-SQfsdjhQj0JyyEmbT3-OIY'),
     'database': os.getenv('DB_NAME', 'bothost_db_e613db7d7af0'),
@@ -1687,3 +1688,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
