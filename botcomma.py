@@ -1231,8 +1231,8 @@ async def view_trade(callback: CallbackQuery):
 
     text = (
         f"Предложение обмена:\n"
-        f"Вы отдаёте: {my_badge}\n"
-        f"Получаете: {other_badge}\n\n"
+        f"Вы отдаёте:{other_badge} \n"
+        f"Получаете:{my_badge} \n\n"
         f"Статус:\n"
         f"✅ Вы подтвердили: {'да' if my_confirmed else 'нет'}\n"
         f"✅ Другая сторона подтвердила: {'да' if other_confirmed else 'нет'}"
